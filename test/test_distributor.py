@@ -1,6 +1,4 @@
 
-from unittest import TestCase
-
 from piriti.message_distributor import MessageDistributor
 from piriti.listener import Listener
 from piriti.path import Path
@@ -15,88 +13,85 @@ class FakeListener(Listener):
     def send(self, data):
         self.messages.append(data)
 
+def test_dispatch_single_match():
+    # Arrange
+    distrib = MessageDistributor()
+    listener = FakeListener()
+    distrib.register(Path('/apple'), listener)
+    data = {"the_answer": 42}
 
-class TestDistributor(TestCase):
+    # Act
+    distrib.dispatch(DataPack(Path('/apple'), data))
 
-    def test_dispatch_single_match(self):
-        # Arrange
-        distrib = MessageDistributor()
-        listener = FakeListener()
-        distrib.register(Path('/apple'), listener)
-        data = {"the_answer": 42}
+    # Assert
+    assert len(listener.messages) == 1
+    assert listener.messages[0]['data'] == data
 
-        # Act
-        distrib.dispatch(DataPack(Path('/apple'), data))
+def test_dispatch_single_not_match():
+    # Arrange
+    distrib = MessageDistributor()
+    listener = FakeListener()
+    distrib.register(Path('/apple'), listener)
+    data = {"the_answer": 42}
 
-        # Assert
-        self.assertEqual(len(listener.messages), 1)
-        self.assertDictEqual(listener.messages[0]['data'], data)
+    # Act
+    distrib.dispatch(DataPack(Path('/pear'), data))
 
-    def test_dispatch_single_not_match(self):
-        # Arrange
-        distrib = MessageDistributor()
-        listener = FakeListener()
-        distrib.register(Path('/apple'), listener)
-        data = {"the_answer": 42}
+    # Assert
+    assert len(listener.messages) == 0
 
-        # Act
-        distrib.dispatch(DataPack(Path('/pear'), data))
+def test_dispatch_sub_tree_match():
+    # Arrange
+    distrib = MessageDistributor()
+    listener = FakeListener()
+    distrib.register(Path('/apple'), listener)
+    data = {"the_answer": 42}
 
-        # Assert
-        self.assertEqual(len(listener.messages), 0)
+    # Act
+    distrib.dispatch(DataPack(Path('/apple/core'), data))
 
-    def test_dispatch_sub_tree_match(self):
-        # Arrange
-        distrib = MessageDistributor()
-        listener = FakeListener()
-        distrib.register(Path('/apple'), listener)
-        data = {"the_answer": 42}
+    # Assert
+    assert len(listener.messages) == 1
+    assert listener.messages[0]['data'] == data
 
-        # Act
-        distrib.dispatch(DataPack(Path('/apple/core'), data))
+def test_dispatch_sub_tree_not_match():
+    # Arrange
+    distrib = MessageDistributor()
+    listener = FakeListener()
+    distrib.register(Path('/apple/core'), listener)
+    data = {"the_answer": 42}
 
-        # Assert
-        self.assertEqual(len(listener.messages), 1)
-        self.assertDictEqual(listener.messages[0]['data'], data)
+    # Act
+    distrib.dispatch(DataPack(Path('/apple'), data))
 
-    def test_dispatch_sub_tree_not_match(self):
-        # Arrange
-        distrib = MessageDistributor()
-        listener = FakeListener()
-        distrib.register(Path('/apple/core'), listener)
-        data = {"the_answer": 42}
+    # Assert
+    assert len(listener.messages) == 0
 
-        # Act
-        distrib.dispatch(DataPack(Path('/apple'), data))
+def test_register():
+    # Arrange
+    distrib = MessageDistributor()
+    listener = FakeListener()
+    path = Path('/apple/core')
 
-        # Assert
-        self.assertEqual(len(listener.messages), 0)
+    # Act
+    distrib.register(path, listener)
 
-    def test_register(self):
-        # Arrange
-        distrib = MessageDistributor()
-        listener = FakeListener()
-        path = Path('/apple/core')
-
-        # Act
-        distrib.register(path, listener)
-
-        # Assert
-        self.assertEqual(len(distrib._listeners), 1)
-        self.assertEqual(distrib._listeners['/apple/core'], [listener])
+    # Assert
+    assert len(distrib._listeners) == 1
+    assert distrib._listeners['/apple/core'] == [listener]
 
 
-    def test_unregister(self):
-        # Arrange
-        distrib = MessageDistributor()
-        listener = FakeListener()
-        path = Path('/apple/core')
-        distrib.register(path, listener)
-        self.assertEqual(len(distrib._listeners), 1)
+def test_unregister():
+    # Arrange
+    distrib = MessageDistributor()
+    listener = FakeListener()
+    path = Path('/apple/core')
+    distrib.register(path, listener)
+    assert len(distrib._listeners) == 1
 
-        # Act
-        res = distrib.unregister(listener)
+    # Act
+    res = distrib.unregister(listener)
 
-        # Assert
-        self.assertTrue(res)
-        self.assertEqual(len(distrib._listeners), 0)
+    # Assert
+    assert res
+    assert len(distrib._listeners) == 0
