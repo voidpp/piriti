@@ -4,6 +4,7 @@ import urlparse
 from urllib import urlencode
 from abc import ABCMeta, abstractmethod
 from werkzeug.routing import BaseConverter, ValidationError
+from querystring_parser import parser
 
 class FormatException(Exception):
     pass
@@ -31,6 +32,7 @@ class FormatterFactory(object):
 
         if name not in cls._instances:
             instance = cls._types[name]()
+            instance.name = name
             cls._instances[name] = instance
 
         return cls._instances[name]
@@ -38,6 +40,7 @@ class FormatterFactory(object):
 class FormatBase(object):
 
     __metaclass__ = ABCMeta
+    name = None
 
     @abstractmethod
     def serialize(self, value):
@@ -71,10 +74,7 @@ class FormEncodedFormat(FormatBase):
         return urlencode(value)
 
     def deserialize(self, value):
-        data = {}
-        for k, v in urlparse.parse_qs(value).items():
-            data[k] = v if len(v) > 1 else v[0]
-        return data
+        return parser.parse(value, normalized = True)
 
 class FormatConverter(BaseConverter):
 
@@ -82,6 +82,3 @@ class FormatConverter(BaseConverter):
         if not FormatterFactory.exists(value):
             raise ValidationError()
         return FormatterFactory.create(value)
-
-
-

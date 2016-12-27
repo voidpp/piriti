@@ -25,4 +25,4 @@ class Listener(object):
         self._websocket.send(self._serializer(data))
 
     def __str__(self):
-        return "<Listener id: {}, socket: {}, serializer: {}>".format(self._id, self._websocket)
+        return "<Listener id: {}, socket: {}>".format(self._id, self._websocket)

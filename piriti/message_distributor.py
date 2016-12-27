@@ -12,17 +12,17 @@ class MessageDistributor(object):
         if path not in self._listeners:
             self._listeners[path.path] = []
         self._listeners[path.path].append(listener)
-        logger.info("New listener on '%s' by '%s'", path, listener)
+        logger.info("Listener %s registered to '%s'", listener, path)
 
     def unregister(self, listener):
+        cnt = 0
         for path in self._listeners:
             for removable_listener in [s for s in self._listeners[path] if s.id == listener.id]:
                 self._listeners[path].remove(removable_listener)
-                if not len(self._listeners[path]):
-                    del self._listeners[path]
+                cnt += 1
                 logger.info("Listener (%s: %s) unregistered", path, removable_listener)
-                return True
-        return False
+
+        return bool(cnt)
 
     def dispatch(self, data_pack):
         """Dispatch

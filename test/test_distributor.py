@@ -94,4 +94,3 @@ def test_unregister():
 
     # Assert
     assert res
-    assert len(distrib._listeners) == 0

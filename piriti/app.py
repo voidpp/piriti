@@ -5,6 +5,7 @@ import configure
 import urlparse
 from flask import Flask, request
 from flask_uwsgi_websocket import GeventWebSocket
+from querystring_parser import parser
 
 from .message_distributor import MessageDistributor
 from .listener import Listener
@@ -15,20 +16,18 @@ from .formats import FormatConverter
 
 logger = logging.getLogger(__name__)
 
-app =  Flask("piriti")
-
-logger.info("Piriti app started")
-
-#websocket = GeventWebSocket(app)
-
-message_distributor = MessageDistributor()
-
-storage = MessageStorageMemory()
+app = Flask("piriti")
 
 app.url_map.converters['path'] = PathConverter
 app.url_map.converters['format'] = FormatConverter
 
-storage.store(DataPack(Path('/magrathea/helene'), {'muha': 42}))
+websocket = GeventWebSocket(app)
+
+logger.info("Piriti app started")
+
+message_distributor = MessageDistributor()
+
+storage = MessageStorageMemory()
 
 @app.route("/data/<format:formatter>/", methods = ["POST"])
 @app.route("/data/<format:formatter>/<path:path>", methods = ["POST"])
@@ -59,13 +58,12 @@ def get_data(formatter, path = Path()):
 
     return formatter.serialize(data_list)
 
-#@websocket.route('/listen/<format:formatter>')
-#@websocket.route('/listen/<format:formatter>/<path:path>')
-def listen(ws, formatter, path = Path()):
+def handle_websocket_client(ws, formatter, paths):
 
-    listener = Listener(ws, formatter.serializer)
+    listener = Listener(ws, formatter.serialize)
 
-    message_distributor.register(path, listener)
+    for path in paths:
+        message_distributor.register(path, listener)
 
     while True:
         message = ws.receive()
@@ -73,3 +71,19 @@ def listen(ws, formatter, path = Path()):
             break
 
     message_distributor.unregister(listener)
+
+@websocket.route('/listen/<format:formatter>/')
+@websocket.route('/listen/<format:formatter>/<path:path>')
+def listen(ws, formatter, path = Path()):
+    handle_websocket_client(ws, formatter, [path])
+
+@websocket.route('/listens/<format:formatter>')
+def listens(ws, formatter):
+    with app.request_context(ws.environ):
+        data = parser.parse(request.query_string, normalized = True)
+        paths = data.get('path', [])
+
+    if len(paths) == 0:
+        return "There is no path specified. Eg: /listens/{}?path[]=/example".format(formatter.name), 404
+
+    handle_websocket_client(ws, formatter, [Path(p) for p in paths])

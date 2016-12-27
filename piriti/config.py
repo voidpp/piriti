@@ -17,5 +17,5 @@ try:
     config = loader.load('piriti.yaml')
 except ConfigFileNotFoundException as e:
     print(e)
-    print("See the example: https://github.com/voidpp/") # TODO
+    print("See the example: https://github.com/voidpp/piriti/config_example.yaml")
     config = None
